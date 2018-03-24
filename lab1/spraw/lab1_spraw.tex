@@ -1,0 +1,135 @@
+\documentclass[polish, 11pt]{article}
+
+\usepackage[a4paper, margin=25mm]{geometry}
+\usepackage{babel}
+\usepackage{polski}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{gasasm}
+\lstset{language=[GAS]Assembler}
+
+
+
+\begin{document}
+	\begin{flushright}
+		Wrocław, 11 marca 2018
+	\end{flushright}
+	
+	Marcin Kotas, 235098
+	WT-P-7.15
+	
+	\begin{flushright}
+		prowadząca: mgr Aleksandra Postawka
+	\end{flushright}
+	
+	\begin{center}
+		Laboratorium Architektury Komputerów
+	
+		(1)	Utrwalenie umiejętności konstruowania programów wykorzystujących pętle i sprawdzanie warunków.
+	\end{center}
+	
+	\section{Treść ćwiczenia}
+	\subsection*{Zakres i program ćwiczenia:}
+		Utworzenie programu wczytującego liczbę ze standardowego strumienia
+		i drukującego dolne przybliżenie pierwiastka kwadratowego z tej liczby.
+		
+	\section{Kod programu}
+	\subsection{Zapisanie liczby z bufora do rejestru}
+		
+		\begin{minipage}{.4\textwidth}
+			W pętli to\_number wykonuje się bajt po bajcie sprawdzanie, czy znak jest kodem cyfry.
+			Jeśli tak, to odejmowany jest kod znaku ascii '0',
+			po czym cyfra dodawana jest do całej liczby (znajdującej się w rejestrze rax)
+			przemnożonej przez 10.
+			W ten sposób liczba w rejestrze odpowiada liczbie wprowadzonej na klawiaturze.
+
+		\end{minipage}%
+		\hspace{1cm}
+		\begin{minipage}{.5\textwidth}	%cspell:disable
+			\begin{lstlisting}	
+    movq %rax, %r8
+    dec %r8        	# -'\n'
+    movq $0, %rbx	
+    movq $0, %rdi	# iterator
+    movq $10, %r10	# podstawa
+    movq $0, %rax	# liczba 
+
+    to_number:
+        movb textin(, %rdi, 1), %bl
+        cmp $'0', %bl
+        jl not_number
+        cmp $'9', %bl
+        jg not_number
+
+        sub $'0', %bl
+
+        mul %r10
+        add %rbx, %rax
+
+        inc %rdi
+        cmp %r8, %rdi
+        jl to_number
+			\end{lstlisting}	%cspell:enable
+		\end{minipage}
+
+	\subsection{Obliczenie pierwiastka}
+	
+		\begin{minipage}{.4\textwidth}
+			Następnie w pętli square\_root obliczana jest suma kolejnych liczb nieparzystych.
+			W momencie, kiedy suma przekroczy wartość wprowadzonej liczby,
+			ilość dodanych liczb nieparzystych wyznacza górne oszacowanie pierwiastka.
+			Aby otrzymać dolne oszacowanie wartość ta jest dekrementowana.
+
+			Pętla to\_stack wyłuskuje z wyniku kolejne cyfry dzieląc przez 10,
+			po czym dodaje do nich kod znaku '0' oraz wrzuca na stos. 
+			Na koniec w pętli to\_text przenosi ze stosu cyfry wyniku do bufora textout,
+			aż do uzyskania pełnego wyniku.
+
+		\end{minipage}%
+		\hspace{1cm}
+		\begin{minipage}{.5\textwidth}	%cspell:disable
+			\begin{lstlisting}	
+	movq $0, %r8	# pierwiastek
+	movq $1, %rdi   # kolejne l. nieparzyste
+	movq $0, %r12   # suma -||-
+
+	square_root:
+		add %rdi, %r12
+		add $2, %rdi
+		inc %r8
+		cmp %rax, %r12
+		jle square_root
+
+	dec %r8	# dolne oszacowanie
+
+	movq %r8, %rax
+	movq $0, %r8
+	to_stack:
+		div %r10
+		add $'0', %rdx
+		push %rdx
+		movq $0, %rdx
+		inc %r8
+		cmp $0, %rax
+		jg to_stack
+
+	movq $0, %rdi
+	to_text:
+		pop textout(, %rdi, 1)
+		inc %rdi
+		cmp %r8, %rdi
+		jl to_text
+
+	movb $'\n', textout(, %rdi, 1)
+			\end{lstlisting}	%cspell:enable
+		\end{minipage}
+
+	\section{Wnioski}
+		Program uruchomił się poprawnie.
+		Pętla zamieniająca liczbę na znaki ascii pobiera cyfry od końca,
+		przez co w buforze cyfra zapisana jest od prawej do lewej.
+		Aby zamienić kolejność cyfr wykorzystany został stos.
+\end{document}

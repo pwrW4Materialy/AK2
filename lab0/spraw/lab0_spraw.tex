@@ -1,0 +1,227 @@
+\documentclass[polish, 11pt]{article}
+
+\usepackage[a4paper, margin=25mm]{geometry}
+\usepackage{babel}
+\usepackage{polski}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{gasasm}
+\lstset{language=[GAS]Assembler}
+
+
+\begin{document}
+	\begin{flushright}
+		Wrocław, 3 marca 2018
+	\end{flushright}
+	
+	Marcin Kotas, 235098
+	WT-P-7.15
+	
+	\begin{flushright}
+	prowadząca: Aleksandra Postawka
+	\end{flushright}
+	
+	\begin{center}
+	Laboratorium Architektury Komputerów
+	
+	(0) Podstawy uruchamiania programów asemblerowych na platformie Linux
+	\end{center}
+	
+	\section{Treść ćwiczenia}
+	\subsection*{Zakres i program ćwiczenia:}
+		Techniki tworzenia i uruchamiania programów napisanych w języku asemblera AT\&T. Obsługa debugger'a gdb.
+		
+	\subsection*{Zrealizowane zadania:}
+		Utworzenie prostego programu ,,Hello, world'' oraz pliku Makefile w celu zautomatyzowania kompilacji
+		i konsolidacji programu za pomocą komendy make.
+		
+		Napisanie programu wczytującego tekst ze standardowego wejścia,
+		zamieniającego wielkie litery na małe i na odwrót.
+		
+	\section{Przebieg ćwiczenia}
+	\subsection{Program ,,Hello, world!''}
+		
+		\begin{minipage}{.5\textwidth}
+		Na początku programu znajduje się sekcja danych (.data).
+		Zawiera ona definicje nazw symbolicznych oraz deklaracje zmiennych i buforów.
+		
+		Sekcja .text zawiera zapis algorytmu programu. \_start oznacza wejście.
+		Funkcja movq kopiuje do kolejnych rejestrów nazwę a następnie argumenty funkcji.
+		Dyrektywa syscall wywołuje funkcję. Funkcja SYSWRITE służy do wydrukowania napisu,
+		a funkcja SYSEXIT wychodzi z programu.
+		\end{minipage}%
+		\hspace{1cm}
+		\begin{minipage}{.5\textwidth}
+			\begin{lstlisting}
+.data
+	SYSREAD = 0
+	SYSWRITE = 1
+	SYSEXIT = 60
+	STDOUT = 1
+	STDIN = 0
+	EXIT_SUCCESS = 0
+
+	buf: .ascii "Hello, world!\n"
+	buf_len= .-buf
+
+.text
+.globl _start
+_start:
+	movq $SYSWRITE, %rax
+	movq $STDOUT, %rdi
+	movq $buf, %rsi
+	movq $buf_len, %rdx
+	syscall
+	
+	movq $SYSEXIT, %rax
+	movq $EXIT_SUCCESS, %rdi
+	syscall
+			\end{lstlisting}
+		\end{minipage}
+		
+	\subsection{Kompilacja programu}
+		Plik należy najpierw skompilować do obiektu za pomocą funkcji \texttt{as -o plik.o plik.s}.
+		Następnie plik.o należy skonsolidować przy użyciu funkcji \texttt{ld -o plik plik.o}.
+		W celu zapamiętania konfiguracji kompilacji warto stworzyć plik Makefile,
+		w którym zachowane będą kolejne instrukcje:
+		\begin{lstlisting}[tabsize=5]
+plik:	plik.o
+		ld -o plik plik.o
+plik.o:	plik.s
+		as -o plik.o plik.s
+		\end{lstlisting}
+		Aby wykonać kompilację za pomocą tego pliku należy użyć w terminalu komendy \texttt{make}.
+		Aby uruchomić program należy użyć komendy \texttt{./plik} będąc w folderze z programem.
+		
+	\subsection{Debugowanie programu}
+		Aby przeprowadzić debugowanie programu za pomocą gdb należy skompilować program z odpowiednimi opcjami,
+		które powiążą polecenia i etykiety z końcowymi kodami.
+		Można to zrobić kompilująć program za pomocą kompilatora gcc: \texttt{gcc -g -o plik plik.s},
+		przy czym należy pamiętać, by w kodzie programu zamienić \texttt{.globl} na \texttt{.global}
+		oraz \texttt{\_start} na \texttt{main}.
+		
+		Drugim sposobem na kompilację programu z obsługą debugowania jest dodanie flagi \texttt{-gstabs}
+		przy wywoływaniu kompilatora \texttt{as}. Nie trzeba wtedy zmieniać nazw w kodzie,
+		jednak w starszych wersjach debugera istniała potrzeba dodania funkcji \texttt{nop}
+		na początek programu ponieważ nie dało się ustawić breakpoint'a na etykiecie \_start.
+		
+		Gdb umożliwia dokładne śledzenie działania programu poprzez zatrzymywanie wykonywania w konkretnym miejscu,
+		a następnie śledzenie krok po kroku i monitorowanie zawartości rejestrów.
+		Aby ustawić breakpoint na konkretnej instrukcji należy wpisać komendę \texttt{b [adres]}.
+		Można posłużyć się etykietami: \texttt{b *\_start}. Do uruchomienia programu służy komenda \texttt{r}.
+		Po zatrzymaniu programu można wykonywać instrukcje krok po kroku (\texttt{s})
+		lub kontynuować normalną pracę programu (\texttt{c}).
+		W każdej chwili pożna wyświetlić zawartość wszystkich rejestrów (\texttt{info registers})
+		lub poszczególnych (\texttt{p/d \$<nazwa rejestru>}).
+		Można również wyświetlić zawartość zmiennych odnosząc się do nich za pomocą \texttt{\&<nazwa zmiennej>}.
+	
+	\subsection{Program zamieniający wielkość liter}
+		\begin{minipage}{.5\textwidth}
+		W sekcji data dodana została zmienna BUFLEN, która definiuje długość w bajtach bufora,
+		do którego wczytywany będzie tekst.
+		
+		Sekcja .bss zawiera niezainicjalizowane dane.
+		Tam znajdują się bufory, do których zostanie zapisany wprowadzony tekst.
+		\end{minipage}%
+		\hspace{1cm}
+		\begin{minipage}{.5\textwidth}
+			\begin{lstlisting}
+.data
+    SYSREAD = 0
+    SYSWRITE = 1
+    SYSEXIT = 60
+    STDOUT = 1
+    STDIN = 0
+    EXIT_SUCCESS = 0
+    BUFLEN = 512
+
+.bss
+    .comm buf_in, 512
+    .comm buf_out, 512
+			\end{lstlisting}
+		\end{minipage}
+		
+		\begin{minipage}{.4\textwidth}
+		Do wczytania tekstu z klawiatury wykorzystana jest funkcja \texttt{SYSREAD},
+		a jako argument podany jest standardowy strumień wejściowy \texttt{STDIN}.
+		Wprowadzony tekst zapisywany jest do bufora \texttt{buf\_in}.
+		Następnie zawartość rejestru \texttt{rax} jest zmniejszana o 1, aby uwzględnić znak końca linii.  
+		
+		\vspace{1cm}
+		W pętli \texttt{zamien\_litery} zawartość bufora jest kopiowana po jednym bajcie do rejestru \texttt{bh}.
+		Poprzez porównanie z kodami liter za pomocą funkcji \texttt{cmp},
+		znak w rejestrze klasyfikowany jest jako litera lub inny znak.		
+		Jeżeli znak jest literą, to poprzez funkcję \texttt{xor} zamieniana jest wielkość litery (liczba \texttt{0x20}
+		posiada tylko jeden bit 1 na miejscu, w którym różnią się liczby wielkie od małych).
+		Na końcu pętli aktualny znak jest kopiowany do bufora wyjściowego,
+		po czym porównywana jest wartość licznika (rejestr \texttt{rdi}) z ilością znaków w buforze (rejestr \texttt{rax}).
+		W tym przypadku wykorzystywany jest skok warunkowy \texttt{jl} - jump if less.
+		
+		\vspace{1cm}
+		Po wykonaniu się pętli do bufora dodawany jest znak końca linii,
+		po czym funkcja SYSWRITE drukuje do strumienia \texttt{STDOUT} zawartość bufora \texttt{buf\_out}.
+		Na końcu wykonuje się funkcja SYSEXIT.
+		\end{minipage}%
+		\hspace{1cm}j
+		\begin{minipage}{.5\textwidth}
+			\begin{lstlisting}
+.text
+.globl _start
+
+_start:
+    movq $SYSREAD, %rax
+    movq $STDIN, %rdi
+    movq $buf_in, %rsi
+    movq $BUFLEN, %rdx
+    syscall
+
+    dec %rax	#'\n'
+    movq $0, %rdi	#licznik
+
+    zamien_litery:
+        movb buf_in(,%rdi, 1), %bh
+        cmp $'A', %bh
+        jl nie_litera
+
+        cmp $'Z', %bh
+        jle litera
+
+        cmp $'a', %bh
+        jl nie_litera
+
+        cmp $'z', %bh
+        jg nie_litera
+
+        litera:
+        movb $0x20, %bl
+        xor %bl, %bh
+
+        nie_litera:
+        movb %bh, buf_out(, %rdi, 1)
+        inc %rdi
+        cmp %rax, %rdi
+        jl zamien_litery
+
+    movb $'\n', buf_out(, %rdi, 1)
+
+    movq $SYSWRITE, %rax
+    movq $STDOUT, %rdi
+    movq $buf_out, %rsi
+    movq $BUFLEN, %rdx
+    syscall
+
+    movq $SYSEXIT, %rax
+    movq $EXIT_SUCCESS, %rdi
+    syscall
+			\end{lstlisting}
+		\end{minipage}
+		
+	\section{Wnioski}
+		Programy uruchomiły się poprawnie.
+		W nowszych wersjach gdb nie ma już potrzeby wstawiania funkcji no operation po \_start,
+		jeśli używa się kompilatora asemblerowego (as).
+		Można również kompilować używająć kompilatora c (gcc), który sprawdza się równie dobrze.
+\end{document}
