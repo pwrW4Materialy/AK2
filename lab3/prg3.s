@@ -55,9 +55,9 @@
         jl num1_decode
 
     movq %rax, %r8
-
     call func
     mov %r9, %rax
+
     mov $0, %rdi
     mov $0, %r8
     cmp $0, %rax
@@ -112,21 +112,23 @@ func:
     push %rbp
     mov %rsp, %rbp
     sub $16, %rsp
-    mov %r8, -8(%rbp)   # preserve %r8 (n)
-    mov %r10, -16(%rbp)   # preserve %r10 (temp result of 5f(n-1))
+    mov %r8, -8(%rbp)
+    mov %r10, -16(%rbp)
         cmp $0, %r8
         je is0
         cmp $1, %r8
         je is1
 
         dec %r8
-        call func       # returns in %r9
+        call func
         mov $5, %rax  
         mul %r9
-        mov %rax, %r10  # %r10 = 5f(n-1)
+        mov %rax, %r10
+        # %r10 = 5f(n-1)
         
         dec %r8
-        call func       # %r9 = f(n-2)
+        call func
+        # %r9 = f(n-2)
         
         sub %r10, %r9
         jmp end
@@ -136,8 +138,8 @@ func:
     is1:
         movq $1, %r9 
     end:
-    mov -8(%rbp), %r8    # restore %r8
-    mov -16(%rbp), %r10  # restore %r10
+    mov -8(%rbp), %r8
+    mov -16(%rbp), %r10
     mov %rbp, %rsp
     pop %rbp
 ret

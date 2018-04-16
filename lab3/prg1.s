@@ -14,22 +14,23 @@
 
 
 .text
-    .globl _start 
+    .global _start 
     _start:
     movq $SYSREAD, %rax
     movq $STDIN, %rdi
     movq $textin, %rsi
     movq $BUFLEN, %rdx
     syscall
-
+    
     movq %rax, %r8
-    sub $3, %r8        # -'\n', potrzeba 3 znaki więc można skończyć wcześniej
+    dec %r8        # -'\n', potrzeba 3 znaki więc można skończyć wcześniej
 
-    mov $0, %rsi
-    movq $0, %rdi
+    mov %r8, %rdi
+    mov $textin, %rsi
     call find_abc
 
-    cmp $-1, %r9
+    cmp $-1, %rax
+    mov $0, %rdi
     jne found
         movb $'-', textout(, %rdi, 1)
         inc %rdi
@@ -38,7 +39,6 @@
         jmp print
 
     found:
-    movq %r9, %rax
     movq $0, %r8
     movq $10, %r10	# podstawa
     movq $0, %rdx
@@ -72,27 +72,33 @@
 
 
 find_abc:
-    cmp %r8, %rsi
+    mov $0, %rdx
+loop:
+    cmp %rdi, %rdx
     jge not_found
-    mov textin(, %rsi, 1), %bl
-    inc %rsi
+    mov (%rsi, %rdx, 1), %bl
+    inc %rdx
     cmp $'a', %bl
-    jne find_abc
+    jne loop
 
-    mov textin(, %rsi, 1), %bl
+    cmp %rdi, %rdx
+    jge not_found
+    mov (%rsi, %rdx, 1), %bl
     cmp $'b', %bl
-    jne find_abc
-    inc %rsi
+    jne loop
+    inc %rdx
 
-    mov textin(, %rsi, 1), %bl
-    inc %rsi
+    cmp %rdi, %rdx
+    jge not_found
+    mov (%rsi, %rdx, 1), %bl
+    inc %rdx
     cmp $'c', %bl
-    jne find_abc
+    jne loop
 
-    sub $3, %rsi
-    mov %rsi, %r9
+    sub $3, %rdx
+    mov %rdx, %rax
 ret
 
     not_found:
-    mov $-1, %r9
+    mov $-1, %rax
 ret

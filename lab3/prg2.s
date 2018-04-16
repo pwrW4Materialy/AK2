@@ -54,9 +54,7 @@
         cmp %r8, %rdi
         jl num1_decode
 
-    movq %rax, %r8
-
-    push %r8
+    push %rax
     call func
     pop %rax
     mov $0, %rdi
@@ -109,29 +107,32 @@
     syscall
 
 
-func:           # %rbx - n
+func:
     push %rbp
     mov %rsp, %rbp
     sub $16, %rsp
     mov 16(%rbp), %rbx
     mov %rbx, -8(%rbp)
+    # -8(%rbp) = n
         cmp $0, -8(%rbp)
         je is0
         cmp $1, -8(%rbp)
         je is1
 
         decq -8(%rbp)
-        push -8(%rbp)       # push (n-1)
-        call func
+        push -8(%rbp)
+        call func # f(n-1)
         pop %rax 
         mov $5, %rbx  
         mul %rbx
-        mov %rax, -16(%rbp) # -16(%rbp) = 5f(n-1)
-        
+        mov %rax, -16(%rbp)
+        # -16(%rbp) = 5f(n-1)
+
         decq -8(%rbp)
-        push -8(%rbp)   # push f(n-2)
+        push -8(%rbp)
         call func
-        pop %rbx    # %rbx = f(n-2)
+        pop %rbx
+        # %rbx = f(n-2)
         
         sub  -16(%rbp), %rbx
         mov %rbx, 16(%rbp)
