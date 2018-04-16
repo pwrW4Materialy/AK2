@@ -1,0 +1,171 @@
+\documentclass[polish, 11pt]{article}
+
+\usepackage[a4paper, margin=25mm]{geometry}
+\usepackage{babel}
+\usepackage{polski}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{gasasm}
+\lstset{language=[GAS]Assembler}
+
+
+
+\begin{document}
+	\begin{flushright}
+		Wrocław, \today
+	\end{flushright}
+	
+	Marcin Kotas, 235098
+	WT-P-7.15
+	
+	\begin{flushright}
+		prowadząca: mgr Aleksandra Postawka
+	\end{flushright}
+	
+	\begin{center}
+		Laboratorium Architektury Komputerów
+	
+		(3)	Funkcje
+	\end{center}
+	
+	\vspace{5cm}
+
+\section{Treść ćwiczenia}
+	\subsection{Program pierwszy:}
+		Pierwszy program zawierał funkcję zwracającą indeks pierwszego wystąpienia ciągu `abc' w łańcuchu znaków
+		--- argumenty i wynik przekazywane w dowolny sposób.
+
+	\subsection{Program drugi:}
+		Program składał się z funkcji rekurencyjnej\\
+		\begin{center}
+			\(f(n)=f(n-2)-5f(n-1)\)
+
+			\(f(0)=3\)
+
+			\(f(1)=1\)
+		\end{center}
+		Argumenty i wynik przekazywane przez stos.
+
+	\subsection{Program trzeci}
+		Trzeci program zawierał implementację tej samej funkcji rekurencyjnej przekazującej argumenty przez rejestry.
+
+\newpage
+\section{Kod programu pierwszego}
+	\subsection{Wywoływanie funkcji}
+		
+		\begin{minipage}{.5\textwidth}
+			Funkcja przyjmuje argumenty według standardowej konwencji wywoływania.
+			Pierwszy argument to długość ciągu znaków, a drugi to adres bufora zawierającego tekst.
+			Funkcja zwraca wynik w rejestrze \texttt{rax}.
+			Jeżeli nie znaleziono szukanego ciągu znaków, zwraca `-1'.
+		\end{minipage}%
+		\hspace{1cm}
+		\begin{minipage}{.5\textwidth}
+			\lstinputlisting[firstline=28,lastline=32]{../prg1.s}
+		\end{minipage}
+
+	\subsection{Implementacja funkcji}
+	
+		\begin{minipage}{.5\textwidth}
+			Na początku funkcja zeruje licznik w rejestrze \texttt{rdx}.
+			W pętli \texttt{loop} następuje porównywanie kolejnych znaków aż wykryta zostanie litera `a'.
+			Jeśli zostanie znaleziona, to następuje sprawdzenie, czy po niej następuje litera `b'.
+			Jeżeli nie, to następuje powrót na początek (bez inkrementacji licznika, aby uniknąć błędu w przypadku ciągu `aabc').
+			Jeżeli wystąpiła litera `b', następuje inkrementacja licznika i sprawdzenie czy następną literą jest `c'.
+			Jeśli tak, funkcja wychodzi z pętli i zwraca licznik obniżony o 3 (wskaźnik na `a') w rejestrze \texttt{rax}.
+			Jeżeli licznik przekroczy wartość w rejestrze \texttt{rdi} (długość tekstu podana jako argument funkcji),
+			to szukana sekwencja znaków nie została odnaleziona i funkcja zwraca `-1'.
+
+		\end{minipage}%
+		\hspace{1cm}
+		\begin{minipage}{.5\textwidth}
+			\lstinputlisting[firstline=74,lastline=104]{../prg1.s}
+		\end{minipage}
+
+\newpage
+\section{Kod programu drugiego}
+	\subsection{Wywoływanie funkcji}
+			
+		\begin{minipage}{.5\textwidth}
+			Funkcja przyjmuje argumenty przez stos.
+			Jedyny argument, jaki przyjmuje to `n'.
+			Wynik również zwracany jest przez stos.
+		\end{minipage}%
+		\hspace{1cm}
+		\begin{minipage}{.5\textwidth}
+			\lstinputlisting[firstline=57,lastline=59]{../prg2.s}
+		\end{minipage}
+
+	\subsection{Implementacja funkcji}
+
+		\begin{minipage}{.5\textwidth}
+			Funkcja na początku odkłada na stosie obecną wartość rejestru \texttt{rbp}, po czym kopiuje wartość \texttt{rsp} do \texttt{rbp}.
+			Następnie odejmuje od \texttt{rsp} 16 bajtów, aby zrobić miejsce na lokalne zmienne.
+			W ten sposób następne wywołanie funkcji przekaże na stos adres powrotu poniżej zmiennych lokalnych.
+			Procedura ta nazywana jest prologiem funkcji.
+
+			Następnie funkcja przenosi argument (znajdujący się nad adresem powrotu --- \texttt{16(\%rbp)}) do adresu zarezerwowanego na zmienne lokalne (\texttt{-8(\%rbp)}).
+			Od tego momentu wszystkie operacje związane z `n' odbywać się będą względem tego adresu.
+			Najpierw sprawdzane jest, czy `n' nie jest równe `0' lub `1'.
+			Jeśli tak, to funkcja zwraca odpowiednio `3' lub `1'.
+
+			Jeśli nie, to następuje dekrementacja i odłożenie na stos `n' (\texttt{-8(\%rbp)}), a następnie wywołanie funkcji.
+			Wynik zwrócony przez funkcję \(f(n-1)\) jest kopiowany do rejestru \texttt{rax} i wymnażany przez 5.
+			Następnie wynik mnożenia kopiowany jest do \texttt{-16(\%rbp)}, aby nie został nadpisany przez kolejne wywołanie funkcji.
+
+			Wartość `n' zostaje kolejny raz dekrementowana w celu wywołania drugi raz funkcji rekurencyjnej.
+			Wynik \(f(n-2)\) kopiowany jest do rejestru \texttt{rbx}, a następnie odejmowana jest od niego wartość zapisana w \texttt{-16(\%rbp)}.
+
+			Wartość zwracana przez funkcję (1, 3, lub \(f(n-2)-5f(n-1)\)) kopiowana jest do \texttt{16(\%rbp)}.
+			Dzięki temu wartość zwracana znajduje się bezpośrednio nad adresem powrotu, więc po wyjściu z funkcji można wykonać na stosie operację `pop' i uzyskać wynik działania funkcji.
+
+			Na końcu funkcji następuje epilog --- przywrócenie poprawnej wartości \texttt{rsp} oraz pobranie ze stosu wcześniejszej wartości \texttt{rbp}.
+			
+		\end{minipage}%
+		\hspace{1cm}
+		\begin{minipage}{.5\textwidth}
+			\lstinputlisting[firstline=110,lastline=148]{../prg2.s}
+		\end{minipage}
+
+\section{Kod programu trzeciego}
+	\subsection{Wywoływanie funkcji}
+
+		\begin{minipage}{.5\textwidth}
+			Funkcja przyjmuje argument i zwraca wynik przez rejestry --- odpowiednio \texttt{r8} i \texttt{r9}.
+		\end{minipage}%
+		\hspace{1cm}
+		\begin{minipage}{.5\textwidth}
+			\lstinputlisting[firstline=57,lastline=59]{../prg3.s}
+		\end{minipage}
+	
+	\subsection{Implementacja funkcji}
+	
+		\begin{minipage}{.5\textwidth}
+			Funkcja przekazuje argumenty przez rejestry, więc musi na początku skopiować ich poprzednią wartość, aby móc ją przywrócić przed zakończeniem.
+			W funkcji wykorzystywany jest również rejestr \texttt{r10} do przechowywania wyniku zwróconego przez funkcję \(f(n-1)\).
+			Z tego powodu funkcja na początku kopiuje wartości rejestrów \texttt{r8} oraz \texttt{r10} do pamięci lokalnej (zarezerwowanej przez przesunięcie \texttt{rsp}).
+
+			Dalej funkcja działa na tej samej zasadzie, co w programie 2.
+
+			Na końcu funkcji przywracane są poprzednie wartości \texttt{r8} oraz \texttt{r10}, po czym następuje normalny epilog funkcji.
+			Wynik znajduje się w rejestrze \texttt{r9}.
+
+			\section{Wnioski}
+	Wszystkie programy uruchomiły się poprawnie.
+
+	W programie drugim nie trzeba było kopiować `n' do \texttt{-8(\%rbp)}, tylko odnosić się do `n' zawsze przez \texttt{16(\%rbp)}.
+	W ten sposób od \texttt{rsp} wystarczyłoby odejmować 8 bajtów na przechowanie wyniku \(5f(n-2)\).
+
+	W programie trzecim warto dostosować wywoływanie do konwencji --- argument w \texttt{rdi}, a wynik w \texttt{rax}.
+	Nie istnieje również potrzeba modyfikowania wartości \texttt{rsp}, gdyż można odkładać używane rejestry na stos przed wywołaniem funkcji. Modyfikacje te zwiększyłyby czytelność kodu.
+		\end{minipage}%
+		\hspace{1cm}
+		\begin{minipage}{.5\textwidth}
+			\lstinputlisting[firstline=111,lastline=145]{../prg3.s}
+		\end{minipage}
+
+
+\end{document}

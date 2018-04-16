@@ -1,0 +1,27 @@
+\ProvidesFile{gasasm.sty}
+    [2018/03/03 0.1 listings language file for GAS]
+    
+\lstdefinelanguage
+   [GAS]{Assembler}
+   {
+   	keywords={rax}, %registers handled by prefix
+	keywords=[2]{mov,movb,movw,movl,movq,and,or,xor,adc,
+		add,sbb,sub,mul,div,imul,idiv,imul,idiv,inc,dec,decq,lea,shl,shr,
+		xchg,jwar,call,ret,push,pop,pushf,popf,jmp,jl,jle,jg,jge,jb,ja,je,
+		jne,jge,jle,jz,jnz,cmp,syscall},
+	sensitive=false,
+	tabsize=4,
+	comment=[l]{\#},
+	string=[b]",
+	belowcaptionskip=1\baselineskip,
+	frame=L,
+	xleftmargin=\parindent,
+	basicstyle=\ttfamily,
+	showstringspaces=false,
+	keywordsprefix=\%,alsoletter=\%,
+	keywordstyle=\color{blue},
+	keywordstyle=[2]{\color{teal}},
+	stringstyle=\color{brown},
+	commentstyle=\color{gray}
+	}[keywords,comments,strings]
+\endinput
