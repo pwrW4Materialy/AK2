@@ -1,11 +1,10 @@
-# Wywoływanie zewnętrznych funkcji w C
 .data
     SYSEXIT = 60
     EXIT_SUCCESS = 0
 
     decimal: .asciz "%d"
     float: .asciz "%f"
-    result: .asciz "%f\n"
+    result: .asciz "%lf\n%lf\n"
 .bss
     .comm num1, 8
     .comm num2, 8
@@ -13,31 +12,30 @@
 .text
     .global main 
     main:
-    push %rbp
-    mov %rsp, %rbp
+    sub $8, %rsp    # align stack to 16 bytes
 
     mov $0, %rax
-    mov $decimal, %rdi
+    mov $float, %rdi
     mov $num1, %rsi
     call scanf
 
     mov $0, %rax
-    mov $float, %rdi
+    mov $decimal, %rdi
     mov $num2, %rsi
     call scanf
 
     mov $1, %rax
-    mov num1, %rdi
-    movss num2, %xmm0
+    mov num2, %rdi
+    movss num1, %xmm0
     call func
+    # result in %xmm0
+    movsd %xmm0, %xmm1
 
-    mov $1, %rax
+    mov $2, %rax
     mov $result, %rdi
-    cvtss2sd %xmm0, %xmm0
     call printf
 
-    mov %rbp, %rsp
-    pop %rbp
+    add $8, %rsp
     movq $SYSEXIT, %rax
     movq $EXIT_SUCCESS, %rdi
     syscall

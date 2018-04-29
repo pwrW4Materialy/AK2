@@ -1,7 +1,7 @@
 .text
 .global func
 
-.type func, @function
+# .type func, @function
 
 func:
     cvtsi2ss %rdi, %xmm1
