@@ -4,6 +4,7 @@
 *.o     
 # compiled programs
 prg
+prg?
 # files used by prgs
 in
 in?
