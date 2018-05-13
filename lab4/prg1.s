@@ -1,3 +1,8 @@
+# Wczytanie argumentu całkowitoliczbowego i zmiennoprzecinkowego za pomocą funkcji bibliotecznej scanf,
+# Wywołanie funkcji napisanej w języku C double f(float x, int y);
+#   f(x, y) = x^2 + y^3
+# Dwukrotne wypisanie wyniku za pomocą pojedynczego wywołania funkcji printf "%lf \n %lf".
+
 .data
     SYSEXIT = 60
     EXIT_SUCCESS = 0
@@ -11,9 +16,7 @@
 
 .text
     .global main 
-    main:
-    sub $8, %rsp    # align stack to 16 bytes
-
+main:
     mov $0, %rax
     mov $float, %rdi
     mov $num1, %rsi
@@ -31,6 +34,9 @@
     # result in %xmm0
     movsd %xmm0, %xmm1
 
+    # align stack to 16 bytes
+    sub $8, %rsp    
+    
     mov $2, %rax
     mov $result, %rdi
     call printf

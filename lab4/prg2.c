@@ -1,11 +1,14 @@
-#include <stdio.h>
+/**
+ * Wstawka w języku asemblera obliczająca wartość liczby danej za pomocą łańcucha znaków w reprezentacji siódemkowej,
+ * np. "14352" i zapisanie wyniku w zmiennej globalnej w jęz. C. Można również przekazać długość.
+ **/
 
-extern long func(char*, int);
+#include <stdio.h>
 
 int main(void)
 {
     int length = 3;
-    long res1;
+    long res;
     char text[] = "123";
     asm("mov $0, %%rax;\
         mov $0, %%r9;\
@@ -26,9 +29,8 @@ int main(void)
         not_number:;\
         mov $0, %%rax;\
         number:"
-        :"=a"(res1)
+        :"=a"(res)
         :"D"(text), "S"(length)
     );
-    long res2 = func(text,length);
-    printf("Inline:%ld\nExtern:%ld\n",res1, res2);
+    printf("Result:%ld\n",res);
 }

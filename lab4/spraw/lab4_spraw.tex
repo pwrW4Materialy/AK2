@@ -1,0 +1,183 @@
+\documentclass[polish, 11pt]{article}
+
+\usepackage[a4paper, margin=25mm]{geometry}
+\usepackage{babel}
+\usepackage{polski}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{gasasm}
+\lstset{language=[GAS]Assembler}
+
+
+\begin{document}
+	\begin{flushright}
+		Wrocław, \today
+	\end{flushright}
+	
+	Marcin Kotas, 235098
+	WT-P-7.15
+	
+	\begin{flushright}
+		prowadząca: mgr Aleksandra Postawka
+	\end{flushright}
+	
+	\begin{center}
+		Laboratorium Architektury Komputerów
+	
+		(4)	Łączenie różnych języków programowania w jednym projekcie
+	\end{center}
+	
+	\vspace{8cm}
+
+\section{Treść ćwiczenia}
+	\subsection*{Zakres i program ćwiczenia:}
+		Pierwszy program napisany w języku asemblera wywołuje funkcje napisane w języku C.
+		Wczytanie argumentu całkowitoliczbowego i zmiennoprzecinkowego za pomocą funkcji bibliotecznej scanf,
+		wywołanie funkcji napisanej w języku C:
+		\begin{lstlisting}[language=C,frame=none,gobble=12]
+			double f(float x, int y);
+			   f(x, y) = x^2 + y^3
+		\end{lstlisting}
+		Dwukrotne wypisanie wyniku za pomocą pojedynczego wywołania funkcji printf \verb|"%lf \n %lf"|.
+
+		Drugi program napisany w języku C zawiera wstawkę w języku asemblera,
+		obliczającą wartość liczby danej za pomocą łańcucha znaków w reprezentacji siódemkowej,
+		np. ''14352'' i zapisanie wyniku w zmiennej globalnej w jęz. C. Można również przekazać długość.
+		
+		Trzeci program napisany w języku C wywołuje funkcje napisane w języku asemblera.
+		Funkcja obliczająca wartość liczby danej w zapisie tekstowym w reprezentacji,
+		w której wagami pozycji są kolejne wartości silni (mniejsze wagi dla bardziej znaczących cyfr).
+
+\newpage
+\section{Program pierwszy}
+	\subsection{Sekcja danych}
+		\begin{minipage}{.5\textwidth}
+			W sekcji danych umieszczone zostały zmienne definiujące argumenty funkcji \verb|scanf| oraz \verb|printf|.			
+		\end{minipage}%
+		\hspace{1cm}
+		\begin{minipage}{.5\textwidth}
+			\lstinputlisting[firstline=10,lastline=15]{../prg1.s}
+		\end{minipage}
+
+	\subsection{Wywoływanie zewnętrznych funkcji}	
+		\begin{minipage}{.5\textwidth}
+			Do rejestru \verb|rax| podawana jest liczba argumentów zmiennoprzecinkowych przekazywanych do funkcji.
+			W rejestrach \verb|rdi| i \verb|rsi| znajdują się pierwsze dwa argumenty wywoływanej funkcji, zgodnie z konwencją wywoływania.
+			Pierwsze wywołanie funkcji wczytuje liczbę zmiennoprzecinkową, a drugie liczbę całkowitą.
+
+			Podczas wywoływania funkcji z argumentami zmiennoprzecinkowymi przekazywane są one przez rejestry \verb|xmm[0-7]|.
+			
+			Funkcja w C ma postać
+
+			Wartość zmiennoprzecinkowa zwrócona przez funkcję znajduje się w rejestrze \verb|xmm0|.
+			Wartość ta jest kopiowana do rejestru \verb|xmm1|, aby mogła zostać przekazana do \verb|printf| dwa razy.
+
+			Zgodnie z \verb|System V AMD64 ABI| (Interfejs binarny aplikacji 64 bitowych wykorzystywany m.in. przez Linux)
+			stos przed wywołaniem funkcji powinien być zawsze wyrównany do 16 bajtów (adres stosu wielokrotnością 16).
+			Z tego powodu przed wywołaniem funkcji \verb|printf| następuje odjęcie 8 od \verb|rsp|
+			(po uruchomieniu programu stos przesunięty jest o 8 bajtów).
+
+			Po wykonaniu funkcji do stosu dodawane jest 8, aby przywrócić go do pierwotnego stanu.
+
+		\end{minipage}%
+		\hspace{1cm}
+		\begin{minipage}{.5\textwidth}
+			\lstinputlisting[firstline=20,lastline=44]{../prg1.s}
+		\end{minipage}
+
+\section{Program drugi}
+	Kod w języku asemblera wstawiany jest w następującym formacie:
+
+	\begin{lstlisting}[language=C,frame=none,gobble=8]
+		asm("instrukcje asemblerowe" 
+			: zwracane wartosci //opcjonalne
+			: argumenty			//
+			: uzywane rejestry  //
+			);			
+	\end{lstlisting}
+
+	\subsection{Instrukcje}
+		W instrukcjach asemblera do rejestrów należy odwoływać się z dwoma znakami \verb|%%|.
+		Do argumentów można odwoływać się za pomocą \verb|%n|, gdzie \verb|n| jest numerem argumentu.
+		Rejestry numerowane są od 0 począwszy od wartości zwracanych
+		(jeśli funkcja zwraca jedną wartość i przyjmuje dwa argumenty, to argument pierwszy będzie miał numer 1 itd.).
+		Ten sposób odwoływania się do rejestrów jest potrzebny,
+		jeśli nie sprecyzuje się, w których rejestrach mają być przechowywane wartości.
+
+	\subsection{Używane rejestry}
+		Zmienne przypisuje się do rejestrów w następującym formacie: \verb|': "<rej>"(<zm>)'|, gdzie:
+
+		\verb|<rej>| może być \verb|'r'|, aby kompilator sam wybrał używany rejestr,
+		lub symbolem rejestru (np. \verb|'a'|, aby użyć rejestru \verb|rax|).
+
+		Przed symbolem rejestru może być dodany modyfikator \verb|'='|,
+		który oznacza, że zmienna użyta będzie tylko do zapisu (zwracanie wyniku).
+
+		\verb|<zm>| to zmienna zadeklarowana w programie.
+		Jeżeli we wstawce asemblerowej używa się pełnych, 64 bitowych rejestrów,
+		zmienna również powinna być 64 bitowa (typ long).
+
+	\subsection{Kod}
+		\begin{minipage}{.45\textwidth}
+			Wstawka asemblerowa traktuje ciąg znaków pod adresem \verb|text| jako liczbę w reprezentacji siódemkowej
+			i oblicza jej wartość dziesiętną.
+			
+			Wynik przekazywany jest z rejestru \verb|rax| do zmiennej \verb|res|.
+
+			Adres ciągu znaków \verb|text| przekazywany jest do rejestru \verb|rdi|,
+			a długość ciągu \verb|length| do rejestru \verb|rsi|.
+
+			Funkcje asemblerowe odwołują się do argumentów bezpośrednio przez zadeklarowane rejestry.
+
+		\end{minipage}%
+		\hspace{1cm}
+		\begin{minipage}{.5\textwidth}
+			\lstinputlisting[firstline=10,lastline=35,language=C,framexleftmargin=-16pt,xleftmargin=-20pt]{../prg2.c}
+		\end{minipage}
+
+\newpage
+\section{Program trzeci}
+	Program wywołuje funkcję napisaną w jęz.\ asemblera, która oblicza wartość liczby danej w zapisie tekstowym w reprezentacji,
+	w której wagami pozycji są kolejne wartości silni (mniejsze wagi dla bardziej znaczących cyfr).
+	
+	\subsection{Program główny}
+		\begin{minipage}{.5\textwidth}
+			Na początku programu zadeklarowana zostaje funkcja zewnętrzna za pomocą słowa kluczowego \verb|extern|.
+			Podane muszą zostać typ zwracany przez funkcję, jej nazwa oraz typy argumentów przyjmowanych przez funkcję.
+
+		\end{minipage}%
+		\hspace{1cm}
+		\begin{minipage}{.5\textwidth}
+			\lstinputlisting[firstline=9,lastline=17,language=C]{../prg3.c}
+		\end{minipage}
+	
+	\subsection{Funkcja w jęz.\ asemblera}
+		\begin{minipage}{.5\textwidth}
+			Funkcja musi zostać zadeklarowana globalnie, co odbywa się na samym początku kodu.
+
+			Argumenty przekazane do funkcji znajdują się w \verb|rdi(text)| oraz \verb|rsi(length)|.
+			
+			Funkcja pobiera kolejne znaki z tekstu, a następnie wymnaża przez aktualną wartość silni, począwszy od 1.
+			Po wymnożeniu wartość dodawana jest do sumy w \verb|rbx|,
+			a wartość silni wymnażana jest przez wartość w rejestrze \verb|r9|, który jest po tej operacji inkrementowany.
+
+			Pętla wykonuje się dopóki licznik w \verb|rcx| nie przekroczy długości tekstu w \verb|rsi|.
+
+			Na końcu suma z \verb|rbx| kopiowana jest do \verb|rax|, gdyż w tym rejestrze zwracany jest wynik funkcji.
+			Jeżeli na którejś pozycji w tekście wystąpił znak inny niż cyfra, zwracany jest wynik \verb|-1|.
+			
+			\section{Wnioski}
+				Wszystkie programy uruchomiły się poprawnie.
+			
+				W programie drugim zaszła potrzeba wyrównania stosu do 16 bajtów podczas wywoływania funkcji \verb|printf| z argumentami zmiennoprzecinkowymi.
+				Mimo iż zgodnie z \verb|System V AMD64 ABI| stos musi zawsze być wyrównany przed wywoływaniem jakiejkolwiek funkcji, często nie powoduje to błędu.
+		\end{minipage}%
+		\hspace{1cm}
+		\begin{minipage}{.5\textwidth}
+			\lstinputlisting[firstline=1,lastline=31]{../prg3.s}
+		\end{minipage}
+
+\end{document}
