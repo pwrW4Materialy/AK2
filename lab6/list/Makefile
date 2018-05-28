@@ -1,2 +1,2 @@
-prg:	prg5.2.s prg5.2.c
-	gcc -g -no-pie -o prg prg5.2.s prg5.2.c
+prg:	prg6.1.c prg6.1.s
+	gcc prg6.1.c prg6.1.s -lm -lSDLmain -lSDL -lSDL_image -o prg
