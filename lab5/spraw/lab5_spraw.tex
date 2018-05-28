@@ -1,0 +1,201 @@
+\documentclass[polish, 11pt]{article}
+
+\usepackage[a4paper, margin=25mm]{geometry}
+\usepackage{babel}
+\usepackage{polski}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{gasasm}
+\lstset{language=[GAS]Assembler}
+
+
+\begin{document}
+	\begin{flushright}
+		Wrocław, \today
+	\end{flushright}
+	
+	Marcin Kotas, 235098
+	WT-P-7.15
+	
+	\begin{flushright}
+		prowadząca: mgr Aleksandra Postawka
+	\end{flushright}
+	
+	\begin{center}
+		Laboratorium Architektury Komputerów
+	
+		(5)	Jednostka zmiennoprzecinkowa (FPU)
+	\end{center}
+	
+	\vspace{8cm}
+
+\section{Treść ćwiczenia}
+	\subsection*{Zakres i program ćwiczenia:}
+		Pierwszy program napisany w języku C wywołuje funkcje napisane w języku asemblera:
+		\begin{enumerate}
+			\item pozwalająca na sprawdzenie wystąpienia wyjątków,
+			\item pozwalająca na ustawienie wybranego bitu maski wyjątków
+		\end{enumerate}
+
+		Drugi program napisany w języku C wywołuje funkcję napisaną w języku asemblera:\newline
+		aproksymacja funkcji ln(1+x) za pomocą szeregu Taylora
+
+		x - argument zmiennoprzecinkowy
+		
+		n - liczba iteracji
+
+\newpage
+\section{Program pierwszy}
+	\subsection{Program główny}
+			W programie dostępne jest menu zaimplementowane jako pętla.
+			Do wyboru są następujące operacje:
+			\begin{enumerate}
+				\item Sprawdzanie, czy wystąpiły wyjątki,
+				\item Ustawienie wybranych masek wyjątków,
+				\item Wyzerowanie wszystkich masek,
+				\item Przeprowadzenie testu dzielenia przez zero
+			\end{enumerate}
+
+			Pierwsza opcja wywołuje funkcję zewnętrzną \verb|checkExc()|,
+			która zwraca liczbę definiującą znalezione wyjątki.
+			Następnie po kolei sprawdza flagi poprzez wykonanie operacji modulo 2 (sprawdzenie czy bit zerowy jest ustawiony)
+			i przesunięcie bitowe w prawo aby sprawdzić kolejną flagę.
+
+			Druga opcja pozwala na wybranie maski do ustawienia --- od 0 do 5.
+			Następnie wywoływana jest zewnętrzna funkcja \verb|maskExc(int exc)|.
+			Jako argument przekazywana jest liczba 2 podniesiona do potęgi równej wybranej masce.
+			W ten sposób uzyskiwany jest ustawiony bit na pozycji odpowiadającej wybranej masce.
+
+			Opcje trzecia oraz czwarta wywołują odpowiednio \verb|clrMasks()| oraz \verb|testDivByZero()|.
+			
+			\lstinputlisting[firstline=12,lastline=71,framexleftmargin=-50pt,xleftmargin=-60pt]{../prg1.c}
+
+	\subsection{Funkcje asemblerowe}	
+		\begin{minipage}{.5\textwidth}
+			Wszystkie funkcje są zadeklarowane w obrębie jednego pliku.
+		\end{minipage}%
+		\hspace{1cm}
+		\begin{minipage}{.5\textwidth}
+			\lstinputlisting[firstline=4,lastline=9]{../prg1.s}
+		\end{minipage}
+
+		\subsubsection{checkExc}
+			\begin{minipage}{.5\textwidth}
+				Funkcja wczytuje zawartość rejestru statusu do rejestru \verb|ax|
+				za pomocą funkcji \verb|fstsw|.
+				Funkcja \verb|fwait| wykonywana jest, aby upewnić się,
+				że następna instrukcja wykona się po wczytaniu rejestru statusu, a nie w trakcie.
+				Następnie czyści starszą część rejestru, aby zostawić tylko flagi wyjątków.
+				Wynik zwraca przez rejestr \verb|rax|.
+			\end{minipage}%
+			\hspace{1cm}
+			\begin{minipage}{.5\textwidth}
+				\lstinputlisting[firstline=10,lastline=15]{../prg1.s}
+			\end{minipage}
+
+		\subsubsection{clrMasks}
+			\begin{minipage}{.5\textwidth}
+				Funkcja wczytuje zawartość rejestru kontrolnego do pamięci
+				za pomocą funkcji \verb|fnstcw|, a następnie kopiuje do rejestru \verb|ax|.
+				Następnie czyści młodsze 6 bitów rejestru, które odpowiadają maskom wyjątków.
+				Na koniec ładuje zawartość rejestru \verb|rax| do pamięci
+				i ładuje do rejestru kontrolnego za pomocą funkcji \verb|fldcw|.
+			\end{minipage}%
+			\hspace{1cm}
+			\begin{minipage}{.5\textwidth}
+				\lstinputlisting[firstline=18,lastline=25]{../prg1.s}
+			\end{minipage}
+
+		\subsubsection{maskExc}
+			\begin{minipage}{.5\textwidth}
+				Funkcja wczytuje zawartość rejestru kontrolnego jak poprzednio.
+				Następnie operacją \verb|OR| ustawia odpowiednie maski przekazane do funkcji w \verb|rdi|.
+				Na koniec ładuje zawartość rejestru \verb|rax| do rejestru kontrolnego.
+			\end{minipage}%
+			\hspace{1cm}
+			\begin{minipage}{.5\textwidth}
+				\lstinputlisting[firstline=27,lastline=34]{../prg1.s}
+			\end{minipage}
+
+		\subsubsection{testDivByZero}
+			\begin{minipage}{.5\textwidth}
+				Na początku ładowane są do stosu FPU zero oraz jeden.
+				Następnie wykonywane jest dzielenie \verb|ST(0) / ST(1)|
+				funkcją \verb|fdivp|, która również usunie wartość na szczycie stosu.
+				Na koniec usuwana jest ostatnia wartość pozostająca w stosie.
+			\end{minipage}%
+			\hspace{1cm}
+			\begin{minipage}{.5\textwidth}
+				\lstinputlisting[firstline=36,lastline=41]{../prg1.s}
+			\end{minipage}
+
+\section{Program drugi}
+	\subsection{Program główny}
+		Program wczytuje argumenty zewnętrznej funkcji \verb|lnApprox| za pomocą funkcji \verb|printf|.
+		\verb|x| musi zawierać się w przedziale \((-1,1]\), ponieważ rozszerzenie Taylora bazuje na sumie szeregu geometrycznego.
+		\verb|steps| oznacza ilość kroków do wykonania.
+		Następnie drukuje wynik wywołania tej funkcji.
+
+		\lstinputlisting[firstline=6,lastline=14,framexleftmargin=-16pt,xleftmargin=-20pt]{../prg2.c}
+
+	\subsection{Funkcja lnApprox}
+		Kolejność działań bazuje na następującym wzorze:
+
+		\begin{displaymath}
+			\ln(1+x)=x-\frac{x^2}{2}+\frac{x^3}{3}-\frac{x^4}{4}+\cdots	
+		\end{displaymath}
+
+		\subsubsection{Ładowanie zmiennych do FPU}
+			Na początku funkcja przekazuje argument z \verb|xmm0| na stos, aby możliwe było załadowanie go do rejestru FPU.\ 
+			Następnie potrzebne zmienne i stałe ładowane są do \verb|FPU|: 
+			\begin{itemize}
+				\item \verb|finit| czyści i inicjalizuje jednostkę \verb|FPU|
+				\item \verb|fld1| ładuje do rejestru \verb|FPU| wartość \(1\)
+				\item \verb|fldl (%rsp)| wczytuje liczbę ze stosu
+				\item \verb|fldz| ładuje wartość \(0\)
+			\end{itemize}
+
+			\lstinputlisting[firstline=9,lastline=17]{../prg2.s}
+
+		\subsubsection{Pętla ln\_loop}			
+			W rejestrze \verb|ST(0)| znajdują się kolejne potęgi \verb|x|.
+			Przed uruchomieniem pętli jego wartość wynosi 1.
+			Na początku każdej iteracji pętli wartość tego rejestru wymnażana jest przez \verb|x| (\verb|ST(2)|).
+			Następnie wartość tego rejestru jest ładowana ponownie (\verb|fld %st|), aby można było wykonać na niej działania
+			jednocześnie zachowując potęgę \verb|x| do dalszych obliczeń.
+
+			Funkcja \verb|fdiv| dokonuje dzielenia \verb|ST(0)/ST(4)|.
+			\verb|faddp| dodaje wartość \verb|ST(0)| do \verb|ST(2)| oraz usuwa wartość z \verb|ST(0)|.
+
+			Następnie na stos FPU ładowana jest wartość 1, która dodawana jest do \verb|ST(4)|, w celu inkrementacji dzielnika.
+			Funkcja \verb|fchs| zmienia znak \verb|ST(0)| (kolejne potęgi \verb|x|) na przeciwny.
+
+			\lstinputlisting[firstline=19,lastline=30]{../prg2.s}
+
+		\subsubsection{Zwracanie wartości}
+			Funkcja najpierw usuwa wartość z góry (potęgi dwójki) za pomocą \verb|fstp %st|
+			--- kopiowanie na siebie i `pop'.
+			Następnie przenosi wynik ze stosu FPU na wskaźnik stosu --- \verb|fstpl (%rsp)|,
+			po czym kopiuje tą wartość do rejestru \verb|xmm0|.
+
+			Na końcu funkcja usuwa dwie pozostałe wartości ze stosu FPU.\ 
+
+			\lstinputlisting[firstline=32,lastline=37]{../prg2.s}
+
+\section{Wnioski}
+	Podczas korzystania z jednostki FPU należy pamiętać o `przesuwaniu' się rejestrów podczas ładowania wartości.
+	Przed rozpoczęciem działań warto wywołać funkcję \verb|finit|, aby upewnić się, że stos FPU jest pusty oraz ustawienia są domyślne.
+	Podczas ładowania oraz odkładania wartości z pamięci lub stosu należy pamiętać o odpowiednim przyrostku:
+	\begin{itemize}
+		\item \verb|s| jeśli wartość jest 32 bitowa (single)
+		\item \verb|l| jeśli jest 64 bitowa (double)
+		\item \verb|t| jeśli jest 80 bitowa (extended double)
+	\end{itemize}
+
+	Przyrostki te nie są zgodne z tymi stosowanymi w każdym innym miejscu w języku asemblera
+	(\verb|l| dla wartości 32 bitowych, \verb|q| dla 64 bitowych).
+	Odnoszą się one do nazw formatów zmiennoprzecinkowych --- \verb|s|hort real, \verb|l|ong real, \verb|t|emporary real.
+\end{document}

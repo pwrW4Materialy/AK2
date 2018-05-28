@@ -1,0 +1,32 @@
+\ProvidesFile{gasasm.sty}
+    [2018/03/03 0.1 listings language file for GAS]
+    
+\lstdefinelanguage
+   [GAS]{Assembler}
+   {
+	keywords={rax, eax, ax, ah, al, rbx, ebx, bx, bh, bl, rcx, ecx, cx, ch, cl, rdx, edx, dx, dh, dl, 
+		rdi,edi,di,dil,rsi,si,esi,sil,rbp,ebp,bp,bpl,rsp,esp,sp,spl,
+		r8,r8d,r8w,r8b,r9,r9d,r9w,r9b,r10,r10d,r10w,r10b,r11,r11d,r11w,r11b,
+		r12,r12d,r12w,r12b,r13,r13d,r13w,r13b,r14,r14d,r14w,r14b,r15,r15d,r15w,r15b,
+		xmm0,xmm1,xmm2,xmm3,xmm4,xmm5,xmm6,xmm7},
+	keywords=[2]{mov,movb,movw,movl,movq,and,or,xor,adc,
+		add,sbb,sub,mul,div,imul,idiv,imul,idiv,inc,dec,decq,lea,shl,shr,
+		xchg,jwar,call,ret,push,pop,pushf,popf,jmp,jl,jle,jg,jge,jb,ja,je,
+		jne,jge,jle,jz,jnz,cmp,syscall,
+		movss,movsd,cvtss2sd,cvtsd2ss,cvtsi2ss,cvtsi2sd,cvtsd2si,cvtss2si,
+		fstsw,fstcw,fnstcw,fwait,fldcw,fldz,fld1,fld,fldl,finit,fstp,fstpl,fadd,faddp,fdiv,fdivp,fmul,fchs},
+	sensitive=false,
+	tabsize=4,
+	comment=[l]{\#},
+	string=[b]",
+	morestring=[b]',
+	belowcaptionskip=1\baselineskip,
+	frame=L,
+	xleftmargin=\parindent,
+	basicstyle=\ttfamily,
+	showstringspaces=false,
+	keywordstyle=\color{blue},
+	keywordstyle=[2]{\color{teal}},
+	stringstyle=\color{brown},
+	commentstyle=\color{gray}
+	}[keywords,comments,strings]
